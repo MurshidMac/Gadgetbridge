@@ -1,3 +1,19 @@
+/*  Copyright (C) 2015-2017 Andreas Shimokawa, Daniele Gobbetti, Uwe Hermann
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.devices.pebble;
 
 import android.util.Pair;
@@ -12,7 +28,7 @@ import java.util.UUID;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEvent;
 import nodomain.freeyourgadget.gadgetbridge.devices.pebble.PebbleColor;
 import nodomain.freeyourgadget.gadgetbridge.model.Weather;
-import ru.gelin.android.weather.notification.ParcelableWeather2;
+import nodomain.freeyourgadget.gadgetbridge.model.WeatherSpec;
 
 class AppMessageHandlerPebStyle extends AppMessageHandler {
     public static final int KEY_AMPM_TEXT = 21;
@@ -76,7 +92,7 @@ class AppMessageHandlerPebStyle extends AppMessageHandler {
 
 
         //WEATHER
-        ParcelableWeather2 weather = Weather.getInstance().getWeather2();
+        WeatherSpec weather = Weather.getInstance().getWeatherSpec();
         if (weather != null) {
             //comment the same key in the general section above!
             pairs.add(new Pair<>(KEY_LOCATION_SERVICE, (Object) 0)); //0 auto, 1 manual
@@ -84,7 +100,7 @@ class AppMessageHandlerPebStyle extends AppMessageHandler {
             pairs.add(new Pair<>(KEY_WEATHER_TEMP, (Object) (weather.currentTemp - 273)));
         }
 
-        byte[] testMessage = mPebbleProtocol.encodeApplicationMessagePush(PebbleProtocol.ENDPOINT_APPLICATIONMESSAGE, mUUID, pairs);
+        byte[] testMessage = mPebbleProtocol.encodeApplicationMessagePush(PebbleProtocol.ENDPOINT_APPLICATIONMESSAGE, mUUID, pairs, null);
 
 
         ByteBuffer buf = ByteBuffer.allocate(testMessage.length);

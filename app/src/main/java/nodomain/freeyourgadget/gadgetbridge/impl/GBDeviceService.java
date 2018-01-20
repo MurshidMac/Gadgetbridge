@@ -1,3 +1,20 @@
+/*  Copyright (C) 2015-2017 Alberto, Andreas Shimokawa, Carsten Pfeiffer,
+    Frank Slezak, ivanovlev, Julien Pivotto, Kasha, Steffen Liebergeld
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.impl;
 
 import android.app.Service;
@@ -11,6 +28,8 @@ import android.support.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.UUID;
 
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.model.Alarm;
 import nodomain.freeyourgadget.gadgetbridge.model.CalendarEventSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.CallSpec;
@@ -54,9 +73,9 @@ public class GBDeviceService implements DeviceService {
     }
 
     protected void invokeService(Intent intent) {
-        if(LanguageUtils.transliterate()){
-            for (String extra: transliterationExtras) {
-                if (intent.hasExtra(extra)){
+        if (LanguageUtils.transliterate()) {
+            for (String extra : transliterationExtras) {
+                if (intent.hasExtra(extra)) {
                     intent.putExtra(extra, LanguageUtils.transliterate(intent.getStringExtra(extra)));
                 }
             }
@@ -85,11 +104,11 @@ public class GBDeviceService implements DeviceService {
         connect(device, false);
     }
 
-        @Override
-    public void connect(@Nullable GBDevice device, boolean performPair) {
+    @Override
+    public void connect(@Nullable GBDevice device, boolean firstTime) {
         Intent intent = createIntent().setAction(ACTION_CONNECT)
                 .putExtra(GBDevice.EXTRA_DEVICE, device)
-                .putExtra(EXTRA_PERFORM_PAIR, performPair);
+                .putExtra(EXTRA_CONNECT_FIRST_TIME, firstTime);
         invokeService(intent);
     }
 
@@ -122,7 +141,8 @@ public class GBDeviceService implements DeviceService {
                 .putExtra(EXTRA_NOTIFICATION_BODY, notificationSpec.body)
                 .putExtra(EXTRA_NOTIFICATION_ID, notificationSpec.id)
                 .putExtra(EXTRA_NOTIFICATION_TYPE, notificationSpec.type)
-                .putExtra(EXTRA_NOTIFICATION_SOURCENAME, notificationSpec.sourceName);
+                .putExtra(EXTRA_NOTIFICATION_SOURCENAME, notificationSpec.sourceName)
+                .putExtra(EXTRA_NOTIFICATION_PEBBLE_COLOR, notificationSpec.pebbleColor);
         invokeService(intent);
     }
 
@@ -149,9 +169,25 @@ public class GBDeviceService implements DeviceService {
 
     @Override
     public void onSetCallState(CallSpec callSpec) {
+        Context context = GBApplication.getContext();
+        String currentPrivacyMode = GBApplication.getPrefs().getString("pref_call_privacy_mode", GBApplication.getContext().getString(R.string.p_call_privacy_mode_off));
+        if (context.getString(R.string.p_call_privacy_mode_name).equals(currentPrivacyMode)) {
+            callSpec.name = callSpec.number;
+        } else if (context.getString(R.string.p_call_privacy_mode_complete).equals(currentPrivacyMode)) {
+            callSpec.number = null;
+            callSpec.name = null;
+        } else if (context.getString(R.string.pref_call_privacy_mode_number).equals(currentPrivacyMode)) {
+            callSpec.name = coalesce(callSpec.name, getContactDisplayNameByNumber(callSpec.number));
+            if (callSpec.name != null && !callSpec.name.equals(callSpec.number)) {
+                callSpec.number = null;
+            }
+        } else {
+            callSpec.name = coalesce(callSpec.name, getContactDisplayNameByNumber(callSpec.number));
+        }
+
         Intent intent = createIntent().setAction(ACTION_CALLSTATE)
                 .putExtra(EXTRA_CALL_PHONENUMBER, callSpec.number)
-                .putExtra(EXTRA_CALL_DISPLAYNAME, coalesce(callSpec.name, getContactDisplayNameByNumber(callSpec.number)))
+                .putExtra(EXTRA_CALL_DISPLAYNAME, callSpec.name)
                 .putExtra(EXTRA_CALL_COMMAND, callSpec.command);
         invokeService(intent);
     }
@@ -216,10 +252,14 @@ public class GBDeviceService implements DeviceService {
     }
 
     @Override
-    public void onAppConfiguration(UUID uuid, String config) {
+    public void onAppConfiguration(UUID uuid, String config, Integer id) {
         Intent intent = createIntent().setAction(ACTION_APP_CONFIGURE)
                 .putExtra(EXTRA_APP_UUID, uuid)
                 .putExtra(EXTRA_APP_CONFIG, config);
+
+        if (id != null) {
+            intent.putExtra(EXTRA_APP_CONFIG_ID, id);
+        }
         invokeService(intent);
     }
 
@@ -283,6 +323,13 @@ public class GBDeviceService implements DeviceService {
     }
 
     @Override
+    public void onSetHeartRateMeasurementInterval(int seconds) {
+        Intent intent = createIntent().setAction(ACTION_SET_HEARTRATE_MEASUREMENT_INTERVAL)
+                .putExtra(EXTRA_INTERVAL_SECONDS, seconds);
+        invokeService(intent);
+    }
+
+    @Override
     public void onEnableRealtimeHeartRateMeasurement(boolean enable) {
         Intent intent = createIntent().setAction(ACTION_ENABLE_REALTIME_HEARTRATE_MEASUREMENT)
                 .putExtra(EXTRA_BOOLEAN_ENABLE, enable);
@@ -297,7 +344,8 @@ public class GBDeviceService implements DeviceService {
                 .putExtra(EXTRA_CALENDAREVENT_TIMESTAMP, calendarEventSpec.timestamp)
                 .putExtra(EXTRA_CALENDAREVENT_DURATION, calendarEventSpec.durationInSeconds)
                 .putExtra(EXTRA_CALENDAREVENT_TITLE, calendarEventSpec.title)
-                .putExtra(EXTRA_CALENDAREVENT_DESCRIPTION, calendarEventSpec.description);
+                .putExtra(EXTRA_CALENDAREVENT_DESCRIPTION, calendarEventSpec.description)
+                .putExtra(EXTRA_CALENDAREVENT_LOCATION, calendarEventSpec.location);
         invokeService(intent);
     }
 
@@ -325,21 +373,13 @@ public class GBDeviceService implements DeviceService {
     @Override
     public void onSendWeather(WeatherSpec weatherSpec) {
         Intent intent = createIntent().setAction(ACTION_SEND_WEATHER)
-                .putExtra(EXTRA_WEATHER_TIMESTAMP, weatherSpec.timestamp)
-                .putExtra(EXTRA_WEATHER_LOCATION, weatherSpec.location)
-                .putExtra(EXTRA_WEATHER_CURRENTTEMP, weatherSpec.currentTemp)
-                .putExtra(EXTRA_WEATHER_CURRENTCONDITIONCODE, weatherSpec.currentConditionCode)
-                .putExtra(EXTRA_WEATHER_CURRENTCONDITION, weatherSpec.currentCondition)
-                .putExtra(EXTRA_WEATHER_TODAYMAXTEMP, weatherSpec.todayMaxTemp)
-                .putExtra(EXTRA_WEATHER_TODAYMINTEMP, weatherSpec.todayMinTemp)
-                .putExtra(EXTRA_WEATHER_TOMORROWMAXTEMP, weatherSpec.tomorrowMaxTemp)
-                .putExtra(EXTRA_WEATHER_TOMORROWMINTEMP, weatherSpec.tomorrowMinTemp)
-                .putExtra(EXTRA_WEATHER_TOMORROWCONDITIONCODE, weatherSpec.tomorrowConditionCode);
+                .putExtra(EXTRA_WEATHER, weatherSpec);
         invokeService(intent);
     }
 
     /**
      * Returns contact DisplayName by call number
+     *
      * @param number contact number
      * @return contact DisplayName, if found it
      */

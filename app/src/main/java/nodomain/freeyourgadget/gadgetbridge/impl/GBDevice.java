@@ -1,3 +1,20 @@
+/*  Copyright (C) 2015-2017 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+    Gobbetti, Uwe Hermann
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.impl;
 
 import android.content.Context;
@@ -44,6 +61,7 @@ public class GBDevice implements Parcelable {
     private static final String DEVINFO_HW_VER = "HW: ";
     private static final String DEVINFO_FW_VER = "FW: ";
     private static final String DEVINFO_HR_VER = "HR: ";
+    private static final String DEVINFO_GPS_VER = "GPS: ";
     private static final String DEVINFO_ADDR = "ADDR: ";
     private static final String DEVINFO_ADDR2 = "ADDR2: ";
     private String mName;
@@ -148,7 +166,7 @@ public class GBDevice implements Parcelable {
     }
 
     /**
-     * Sets the second firmware version, typically the heart rate firmware version
+     * Sets the second firmware version (HR or GPS or other component)
      * @param firmwareVersion2
      */
     public void setFirmwareVersion2(String firmwareVersion2) {
@@ -428,7 +446,12 @@ public class GBDevice implements Parcelable {
             result.add(new GenericItem(DEVINFO_FW_VER, mFirmwareVersion));
         }
         if (mFirmwareVersion2 != null) {
-            result.add(new GenericItem(DEVINFO_HR_VER, mFirmwareVersion2));
+            // FIXME: thats ugly
+            if (mDeviceType == DeviceType.AMAZFITBIP) {
+                result.add(new GenericItem(DEVINFO_GPS_VER, mFirmwareVersion2));
+            } else {
+                result.add(new GenericItem(DEVINFO_HR_VER, mFirmwareVersion2));
+            }
         }
         if (mAddress != null) {
             result.add(new GenericItem(DEVINFO_ADDR, mAddress));

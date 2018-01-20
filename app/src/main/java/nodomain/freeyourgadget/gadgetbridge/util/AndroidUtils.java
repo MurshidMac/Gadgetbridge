@@ -1,10 +1,42 @@
+/*  Copyright (C) 2016-2017 Andreas Shimokawa, Carsten Pfeiffer
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.util;
 
+import android.app.Activity;
 import android.content.BroadcastReceiver;
+import android.content.ContentUris;
 import android.content.Context;
+import android.content.res.Configuration;
+import android.database.Cursor;
+import android.graphics.Color;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
 import android.os.ParcelUuid;
 import android.os.Parcelable;
+import android.provider.DocumentsContract;
+import android.provider.MediaStore;
 import android.support.v4.content.LocalBroadcastManager;
+
+import java.net.URISyntaxException;
+import java.util.Locale;
+
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class AndroidUtils {
     public static ParcelUuid[] toParcelUUids(Parcelable[] uuids) {
@@ -44,5 +76,106 @@ public class AndroidUtils {
         } catch (IllegalArgumentException ex) {
             return false;
         }
+    }
+
+    public static void setLanguage(Context context, Locale language) {
+        Configuration config = new Configuration();
+        config.setLocale(language);
+
+        // FIXME: I have no idea what I am doing
+        context.getResources().updateConfiguration(config, context.getResources().getDisplayMetrics());
+    }
+
+    /**
+     * Returns the theme dependent text color as a css-style hex string.
+     * @param context the context to access the colour
+     */
+    public static String getTextColorHex(Context context) {
+        int color;
+        if (GBApplication.isDarkThemeEnabled()) {
+            color = context.getResources().getColor(R.color.primarytext_dark);
+        } else {
+            color = context.getResources().getColor(R.color.primarytext_light);
+        }
+        return colorToHex(color);
+    }
+
+    /**
+     * Returns the theme dependent background color as a css-style hex string.
+     * @param context the context to access the colour
+     */
+    public static String getBackgroundColorHex(Context context) {
+        int color;
+        if (GBApplication.isDarkThemeEnabled()) {
+            color = context.getResources().getColor(R.color.cardview_dark_background);
+        } else {
+            color = context.getResources().getColor(R.color.cardview_light_background);
+        }
+        return colorToHex(color);
+    }
+
+    private static String colorToHex(int color) {
+        return "#"
+                + Integer.toHexString(Color.red(color))
+                + Integer.toHexString(Color.green(color))
+                + Integer.toHexString(Color.blue(color));
+    }
+
+    /**
+     * As seen on stackoverflow https://stackoverflow.com/a/36714242/1207186
+     * Try to find the file path of a document uri
+     * @param context the application context
+     * @param uri the Uri for which the path should be resolved
+     * @return the path corresponding to the Uri as a String
+     * @throws URISyntaxException
+    */
+    public static String getFilePath(Context context, Uri uri) throws URISyntaxException {
+        String selection = null;
+        String[] selectionArgs = null;
+        // Uri is different in versions after KITKAT (Android 4.4), we need to
+        if (Build.VERSION.SDK_INT >= 19 && DocumentsContract.isDocumentUri(context.getApplicationContext(), uri)) {
+            if ("com.android.externalstorage.documents".equals(uri.getAuthority())) {
+                final String docId = DocumentsContract.getDocumentId(uri);
+                final String[] split = docId.split(":");
+                return Environment.getExternalStorageDirectory() + "/" + split[1];
+            } else if ("com.android.providers.downloads.documents".equals(uri.getAuthority())) {
+                final String id = DocumentsContract.getDocumentId(uri);
+                uri = ContentUris.withAppendedId(
+                        Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));
+            } else if ("com.android.providers.media.documents".equals(uri.getAuthority())) {
+                final String docId = DocumentsContract.getDocumentId(uri);
+                final String[] split = docId.split(":");
+                final String type = split[0];
+                if ("image".equals(type)) {
+                    uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+                } else if ("video".equals(type)) {
+                    uri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+                } else if ("audio".equals(type)) {
+                    uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+                }
+                selection = "_id=?";
+                selectionArgs = new String[]{
+                        split[1]
+                };
+            }
+        }
+        if ("content".equalsIgnoreCase(uri.getScheme())) {
+            String[] projection = {
+                    MediaStore.Images.Media.DATA
+            };
+            Cursor cursor = null;
+            try {
+                cursor = context.getContentResolver()
+                        .query(uri, projection, selection, selectionArgs, null);
+                int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+                if (cursor.moveToFirst()) {
+                    return cursor.getString(column_index);
+                }
+            } catch (Exception e) {
+            }
+        } else if ("file".equalsIgnoreCase(uri.getScheme())) {
+            return uri.getPath();
+        }
+        return null;
     }
 }

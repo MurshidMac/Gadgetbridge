@@ -1,3 +1,19 @@
+/*  Copyright (C) 2016-2017 Andreas Shimokawa
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.externalevents;
 
 import android.bluetooth.BluetoothDevice;
@@ -25,18 +41,18 @@ public class BluetoothConnectReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
-        if (!action.equals(BluetoothDevice.ACTION_ACL_CONNECTED)) {
+        if (!action.equals(BluetoothDevice.ACTION_ACL_CONNECTED) || !intent.hasExtra(BluetoothDevice.EXTRA_DEVICE)) {
             return;
         }
-        LOG.info("got connection attempt");
+
+        BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+        LOG.info("connection attempt detected from or to " + device.getAddress() + "(" + device.getName() + ")");
+
         GBDevice gbDevice = service.getGBDevice();
         if (gbDevice != null) {
-            BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
             if (device.getAddress().equals(gbDevice.getAddress()) && gbDevice.getState() == GBDevice.State.WAITING_FOR_RECONNECT) {
-                LOG.info("will connect to " + gbDevice.getName());
+                LOG.info("Will re-connect to " + gbDevice.getAddress() + "(" + gbDevice.getName() + ")");
                 GBApplication.deviceService().connect();
-            } else {
-                LOG.info("won't connect to " + device.getAddress() + "(" + device.getName() + ")");
             }
         }
     }

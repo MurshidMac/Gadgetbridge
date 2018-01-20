@@ -1,13 +1,30 @@
+/*  Copyright (C) 2015-2017 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+    Gobbetti
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.devices.pebble;
 
 import android.app.Activity;
 import android.content.Context;
 import android.net.Uri;
+import android.support.annotation.NonNull;
 
 import de.greenrobot.dao.query.QueryBuilder;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.GBException;
-import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.appmanager.AppManagerActivity;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractDeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.InstallHandler;
@@ -29,6 +46,7 @@ public class PebbleCoordinator extends AbstractDeviceCoordinator {
     public PebbleCoordinator() {
     }
 
+    @NonNull
     @Override
     public DeviceType getSupportedType(GBDeviceCandidate candidate) {
         String name = candidate.getDevice().getName();
@@ -49,12 +67,7 @@ public class PebbleCoordinator extends AbstractDeviceCoordinator {
     }
 
     @Override
-    public Class<? extends Activity> getPrimaryActivity() {
-        return AppManagerActivity.class;
-    }
-
-    @Override
-    protected void deleteDevice(GBDevice gbDevice, Device device, DaoSession session) throws GBException {
+    protected void deleteDevice(@NonNull GBDevice gbDevice, @NonNull Device device, @NonNull DaoSession session) throws GBException {
         Long deviceId = device.getId();
         QueryBuilder<?> qb = session.getPebbleHealthActivitySampleDao().queryBuilder();
         qb.where(PebbleHealthActivitySampleDao.Properties.DeviceId.eq(deviceId)).buildDelete().executeDeleteWithoutDetachingEntities();
@@ -119,11 +132,6 @@ public class PebbleCoordinator extends AbstractDeviceCoordinator {
     }
 
     @Override
-    public int getTapString() {
-        return R.string.tap_connected_device_for_app_mananger;
-    }
-
-    @Override
     public String getManufacturer() {
         return "Pebble";
     }
@@ -136,5 +144,20 @@ public class PebbleCoordinator extends AbstractDeviceCoordinator {
     @Override
     public Class<? extends Activity> getAppsManagementActivity() {
         return AppManagerActivity.class;
+    }
+
+    @Override
+    public boolean supportsCalendarEvents() {
+        return true;
+    }
+
+    @Override
+    public boolean supportsRealtimeData() {
+        return false;
+    }
+
+    @Override
+    public boolean supportsWeather() {
+        return true;
     }
 }

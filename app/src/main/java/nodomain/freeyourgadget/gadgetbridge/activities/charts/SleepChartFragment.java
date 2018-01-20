@@ -1,3 +1,20 @@
+/*  Copyright (C) 2015-2017 0nse, Andreas Shimokawa, Carsten Pfeiffer,
+    Daniele Gobbetti
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.activities.charts;
 
 import android.content.Context;
@@ -9,13 +26,13 @@ import android.view.ViewGroup;
 
 import com.github.mikephil.charting.animation.Easing;
 import com.github.mikephil.charting.charts.Chart;
-import com.github.mikephil.charting.charts.CombinedChart;
+import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.charts.PieChart;
 import com.github.mikephil.charting.components.LegendEntry;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
-import com.github.mikephil.charting.data.CombinedData;
 import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.PieData;
 import com.github.mikephil.charting.data.PieDataSet;
 import com.github.mikephil.charting.data.PieEntry;
@@ -43,7 +60,7 @@ import nodomain.freeyourgadget.gadgetbridge.util.DateTimeUtils;
 public class SleepChartFragment extends AbstractChartFragment {
     protected static final Logger LOG = LoggerFactory.getLogger(ActivitySleepChartFragment.class);
 
-    private CombinedChart mActivityChart;
+    private LineChart mActivityChart;
     private PieChart mSleepAmountChart;
 
     private int mSmartAlarmFrom = -1;
@@ -88,6 +105,10 @@ public class SleepChartFragment extends AbstractChartFragment {
             }
         });
         set.setColors(colors);
+        set.setValueTextColor(DESCRIPTION_COLOR);
+        set.setValueTextSize(13f);
+        set.setXValuePosition(PieDataSet.ValuePosition.OUTSIDE_SLICE);
+        set.setYValuePosition(PieDataSet.ValuePosition.OUTSIDE_SLICE);
         data.setDataSet(set);
 
         //setupLegend(pieChart);
@@ -115,7 +136,7 @@ public class SleepChartFragment extends AbstractChartFragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_sleepchart, container, false);
 
-        mActivityChart = (CombinedChart) rootView.findViewById(R.id.sleepchart);
+        mActivityChart = (LineChart) rootView.findViewById(R.id.sleepchart);
         mSleepAmountChart = (PieChart) rootView.findViewById(R.id.sleepchart_pie_light_deep);
 
         setupActivityChart();
@@ -145,6 +166,7 @@ public class SleepChartFragment extends AbstractChartFragment {
     private void setupSleepAmountChart() {
         mSleepAmountChart.setBackgroundColor(BACKGROUND_COLOR);
         mSleepAmountChart.getDescription().setTextColor(DESCRIPTION_COLOR);
+        mSleepAmountChart.setEntryLabelColor(DESCRIPTION_COLOR);
         mSleepAmountChart.getDescription().setText("");
 //        mSleepAmountChart.getDescription().setNoDataTextDescription("");
         mSleepAmountChart.setNoDataText("");
@@ -240,10 +262,10 @@ public class SleepChartFragment extends AbstractChartFragment {
     }
 
     private static class MyChartsData extends ChartsData {
-        private final DefaultChartsData<CombinedData> chartsData;
+        private final DefaultChartsData<LineData> chartsData;
         private final MySleepChartsData pieData;
 
-        public MyChartsData(MySleepChartsData pieData, DefaultChartsData<CombinedData> chartsData) {
+        public MyChartsData(MySleepChartsData pieData, DefaultChartsData<LineData> chartsData) {
             this.pieData = pieData;
             this.chartsData = chartsData;
         }
@@ -252,7 +274,7 @@ public class SleepChartFragment extends AbstractChartFragment {
             return pieData;
         }
 
-        public DefaultChartsData<CombinedData> getChartsData() {
+        public DefaultChartsData<LineData> getChartsData() {
             return chartsData;
         }
     }

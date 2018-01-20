@@ -1,3 +1,20 @@
+/*  Copyright (C) 2015-2017 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+    Gobbetti, Kasha, Steffen Liebergeld
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.devices.pebble;
 
 import android.net.Uri;
@@ -13,6 +30,7 @@ import java.util.UUID;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.activities.SettingsActivity;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.Alarm;
 import nodomain.freeyourgadget.gadgetbridge.model.CalendarEventSpec;
@@ -50,11 +68,34 @@ public class PebbleSupport extends AbstractSerialDeviceSupport {
 
     @Override
     public void onInstallApp(Uri uri) {
-        getDeviceIOThread().installApp(uri, 0);
+        PebbleProtocol pebbleProtocol = (PebbleProtocol) getDeviceProtocol();
+        PebbleIoThread pebbleIoThread = getDeviceIOThread();
+        // catch fake urls first
+        if (uri.equals(Uri.parse("fake://health"))) {
+            getDeviceIOThread().write(pebbleProtocol.encodeActivateHealth(true));
+            String units = GBApplication.getPrefs().getString(SettingsActivity.PREF_MEASUREMENT_SYSTEM, getContext().getString(R.string.p_unit_metric));
+            if (units.equals(getContext().getString(R.string.p_unit_metric))) {
+                pebbleIoThread.write(pebbleProtocol.encodeSetSaneDistanceUnit(true));
+            } else {
+                pebbleIoThread.write(pebbleProtocol.encodeSetSaneDistanceUnit(false));
+            }
+            return;
+        }
+        if (uri.equals(Uri.parse("fake://hrm"))) {
+            getDeviceIOThread().write(pebbleProtocol.encodeActivateHRM(true));
+            return;
+        }
+        if (uri.equals(Uri.parse("fake://weather"))) {
+            getDeviceIOThread().write(pebbleProtocol.encodeActivateWeather(true));
+            return;
+        }
+
+        // it is a real app
+        pebbleIoThread.installApp(uri, 0);
     }
 
     @Override
-    public void onAppConfiguration(UUID uuid, String config) {
+    public void onAppConfiguration(UUID uuid, String config, Integer id) {
         try {
             ArrayList<Pair<Integer, Object>> pairs = new ArrayList<>();
 
@@ -70,10 +111,12 @@ public class PebbleSupport extends AbstractSerialDeviceSupport {
                         byteArray[i] = ((Integer) jsonArray.get(i)).byteValue();
                     }
                     object = byteArray;
+                } else if (object instanceof Boolean) {
+                    object = (short) (((Boolean) object) ? 1 : 0);
                 }
                 pairs.add(new Pair<>(Integer.parseInt(keyStr), object));
             }
-            getDeviceIOThread().write(((PebbleProtocol) getDeviceProtocol()).encodeApplicationMessagePush(PebbleProtocol.ENDPOINT_APPLICATIONMESSAGE, uuid, pairs));
+            getDeviceIOThread().write(((PebbleProtocol) getDeviceProtocol()).encodeApplicationMessagePush(PebbleProtocol.ENDPOINT_APPLICATIONMESSAGE, uuid, pairs, id));
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -86,6 +129,11 @@ public class PebbleSupport extends AbstractSerialDeviceSupport {
 
     @Override
     public void onSetConstantVibration(int intensity) {
+
+    }
+
+    @Override
+    public void onSetHeartRateMeasurementInterval(int seconds) {
 
     }
 
@@ -122,7 +170,13 @@ public class PebbleSupport extends AbstractSerialDeviceSupport {
             notificationSpec.title = null;
             notificationSpec.phoneNumber = null;
         } else if (getContext().getString(R.string.p_pebble_privacy_mode_content).equals(currentPrivacyMode)) {
-            notificationSpec.sender = "\n\n\n\n\n" + notificationSpec.sender;
+            if (notificationSpec.sender != null) {
+                notificationSpec.sender = "\n\n\n\n\n" + notificationSpec.sender;
+            } else if (notificationSpec.title != null) {
+                notificationSpec.title = "\n\n\n\n\n" + notificationSpec.title;
+            } else if (notificationSpec.subject != null) {
+                notificationSpec.subject = "\n\n\n\n\n" + notificationSpec.subject;
+            }
         }
         if (reconnect()) {
             super.onNotification(notificationSpec);
@@ -131,14 +185,6 @@ public class PebbleSupport extends AbstractSerialDeviceSupport {
 
     @Override
     public void onSetCallState(CallSpec callSpec) {
-        String currentPrivacyMode = GBApplication.getPrefs().getString("pebble_pref_privacy_mode", getContext().getString(R.string.p_pebble_privacy_mode_off));
-        if (getContext().getString(R.string.p_pebble_privacy_mode_complete).equals(currentPrivacyMode)) {
-            callSpec.name = null;
-            callSpec.number = null;
-        } else if (getContext().getString(R.string.p_pebble_privacy_mode_content).equals(currentPrivacyMode)) {
-            callSpec.name = null;
-        }
-
         if (reconnect()) {
             if ((callSpec.command != CallSpec.CALL_OUTGOING) || GBApplication.getPrefs().getBoolean("pebble_enable_outgoing_call", true)) {
                 super.onSetCallState(callSpec);

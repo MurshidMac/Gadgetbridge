@@ -1,8 +1,25 @@
+/*  Copyright (C) 2016-2017 Carsten Pfeiffer, JohnnySun
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.util;
 
 import android.content.SharedPreferences;
 import android.util.Log;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -145,5 +162,17 @@ public class Prefs {
      */
     public SharedPreferences getPreferences() {
         return preferences;
+    }
+
+    /**
+     * Ugly workaround for Set<String> preferences not consistently applying.
+     * @param editor
+     * @param preference
+     * @param value
+     */
+    public static void putStringSet(SharedPreferences.Editor editor, String preference, HashSet<String> value) {
+        editor.putStringSet(preference, null);
+        editor.commit();
+        editor.putStringSet(preference, new HashSet<>(value));
     }
 }

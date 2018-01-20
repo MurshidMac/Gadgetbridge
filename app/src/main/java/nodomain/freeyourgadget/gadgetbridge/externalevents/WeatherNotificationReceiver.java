@@ -1,3 +1,19 @@
+/*  Copyright (C) 2015-2017 Andreas Shimokawa, Daniele Gobbetti
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.externalevents;
 
 import android.content.BroadcastReceiver;
@@ -19,32 +35,24 @@ public class WeatherNotificationReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (!intent.getAction().contains("WEATHER_UPDATE_2")) {
+        if (intent.getAction() == null || !intent.getAction().contains("WEATHER_UPDATE_2")) {
             LOG.info("Wrong action");
             return;
         }
-        ParcelableWeather2 weather = null;
+        ParcelableWeather2 parcelableWeather2 = null;
         try {
-            weather = intent.getParcelableExtra("ru.gelin.android.weather.notification.EXTRA_WEATHER");
+            parcelableWeather2 = intent.getParcelableExtra("ru.gelin.android.weather.notification.EXTRA_WEATHER");
         } catch (RuntimeException e) {
-            e.printStackTrace();
+            LOG.error("cannot get ParcelableWeather2", e);
         }
 
-        if (weather != null) {
-            Weather.getInstance().setWeather2(weather);
-            LOG.info("weather in " + weather.location + " is " + weather.currentCondition + " (" + (weather.currentTemp - 273) + "°C)");
+        if (parcelableWeather2 != null) {
+            Weather weather = Weather.getInstance();
+            weather.setReconstructedOWMForecast(parcelableWeather2.reconstructedOWMForecast);
 
-            WeatherSpec weatherSpec = new WeatherSpec();
-            weatherSpec.timestamp = (int) (weather.queryTime / 1000);
-            weatherSpec.location = weather.location;
-            weatherSpec.currentTemp = weather.currentTemp;
-            weatherSpec.currentCondition = weather.currentCondition;
-            weatherSpec.currentConditionCode = weather.currentConditionCode;
-            weatherSpec.todayMaxTemp = weather.todayHighTemp;
-            weatherSpec.todayMinTemp = weather.todayLowTemp;
-            weatherSpec.tomorrowConditionCode = weather.forecastConditionCode;
-            weatherSpec.tomorrowMaxTemp = weather.forecastHighTemp;
-            weatherSpec.tomorrowMinTemp = weather.forecastLowTemp;
+            WeatherSpec weatherSpec = parcelableWeather2.weatherSpec;
+            LOG.info("weather in " + weatherSpec.location + " is " + weatherSpec.currentCondition + " (" + (weatherSpec.currentTemp - 273) + "°C)");
+
             Weather.getInstance().setWeatherSpec(weatherSpec);
             GBApplication.deviceService().onSendWeather(weatherSpec);
         }

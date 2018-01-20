@@ -1,3 +1,20 @@
+/*  Copyright (C) 2016-2017 Andreas Shimokawa, Carsten Pfeiffer, João
+    Paulo Barraca
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.devices.hplus;
 
 /*
@@ -8,6 +25,7 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.bluetooth.le.ScanFilter;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.os.ParcelUuid;
@@ -17,6 +35,7 @@ import de.greenrobot.dao.query.QueryBuilder;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.GBException;
 import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.activities.SettingsActivity;
 import nodomain.freeyourgadget.gadgetbridge.activities.charts.ChartsActivity;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractDeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.InstallHandler;
@@ -36,6 +55,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Locale;
+
+import static nodomain.freeyourgadget.gadgetbridge.GBApplication.getContext;
 
 public class HPlusCoordinator extends AbstractDeviceCoordinator {
     protected static final Logger LOG = LoggerFactory.getLogger(HPlusCoordinator.class);
@@ -62,6 +84,26 @@ public class HPlusCoordinator extends AbstractDeviceCoordinator {
     }
 
     @Override
+    public int getBondingStyle(GBDevice deviceCandidate){
+        return BONDING_STYLE_NONE;
+    }
+
+    @Override
+    public boolean supportsCalendarEvents() {
+        return false;
+    }
+
+    @Override
+    public boolean supportsRealtimeData() {
+        return true;
+    }
+
+    @Override
+    public boolean supportsWeather() {
+        return false;
+    }
+
+    @Override
     public DeviceType getDeviceType() {
         return DeviceType.HPLUS;
     }
@@ -69,11 +111,6 @@ public class HPlusCoordinator extends AbstractDeviceCoordinator {
     @Override
     public Class<? extends Activity> getPairingActivity() {
         return null;
-    }
-
-    @Override
-    public Class<? extends Activity> getPrimaryActivity() {
-        return ChartsActivity.class;
     }
 
     @Override
@@ -117,11 +154,6 @@ public class HPlusCoordinator extends AbstractDeviceCoordinator {
     }
 
     @Override
-    public int getTapString() {
-        return R.string.tap_connected_device_for_activity;
-    }
-
-    @Override
     public String getManufacturer() {
         return "Zeblaze";
     }
@@ -144,37 +176,61 @@ public class HPlusCoordinator extends AbstractDeviceCoordinator {
     }
 
     public static byte getLanguage(String address) {
-        return (byte) prefs.getInt(HPlusConstants.PREF_HPLUS_LANGUAGE + "_" + address, HPlusConstants.ARG_LANGUAGE_EN);
+        String language = prefs.getString("language", "default");
+        Locale locale;
 
+        if (language.equals("default")) {
+            locale = Locale.getDefault();
+        } else {
+            locale = new Locale(language);
+        }
+
+        if (locale.getLanguage().equals(new Locale("cn").getLanguage())){
+            return HPlusConstants.ARG_LANGUAGE_CN;
+        }else{
+            return HPlusConstants.ARG_LANGUAGE_EN;
+        }
     }
 
     public static byte getTimeMode(String address) {
-        return (byte) prefs.getInt(HPlusConstants.PREF_HPLUS_TIMEMODE + "_" + address, HPlusConstants.ARG_TIMEMODE_24H);
+        String tmode = prefs.getString(HPlusConstants.PREF_HPLUS_TIMEFORMAT, getContext().getString(R.string.p_timeformat_24h));
+
+        if(tmode.equals(getContext().getString(R.string.p_timeformat_24h))) {
+            return HPlusConstants.ARG_TIMEMODE_24H;
+        }else{
+            return HPlusConstants.ARG_TIMEMODE_12H;
+        }
     }
 
     public static byte getUnit(String address) {
-        return (byte) prefs.getInt(HPlusConstants.PREF_HPLUS_UNIT + "_" + address, 0);
+        String units = prefs.getString(SettingsActivity.PREF_MEASUREMENT_SYSTEM, getContext().getString(R.string.p_unit_metric));
+
+        if(units.equals(getContext().getString(R.string.p_unit_metric))){
+            return HPlusConstants.ARG_UNIT_METRIC;
+        }else{
+            return HPlusConstants.ARG_UNIT_IMPERIAL;
+        }
     }
 
-    public static byte getUserWeight(String address) {
+    public static byte getUserWeight() {
         ActivityUser activityUser = new ActivityUser();
 
         return (byte) (activityUser.getWeightKg() & 0xFF);
     }
 
-    public static byte getUserHeight(String address) {
+    public static byte getUserHeight() {
         ActivityUser activityUser = new ActivityUser();
 
         return (byte) (activityUser.getHeightCm() & 0xFF);
     }
 
-    public static byte getUserAge(String address) {
+    public static byte getUserAge() {
         ActivityUser activityUser = new ActivityUser();
 
         return (byte) (activityUser.getAge() & 0xFF);
     }
 
-    public static byte getUserGender(String address) {
+    public static byte getUserGender() {
         ActivityUser activityUser = new ActivityUser();
 
         if (activityUser.getGender() == ActivityUser.GENDER_MALE)
@@ -183,22 +239,24 @@ public class HPlusCoordinator extends AbstractDeviceCoordinator {
         return HPlusConstants.ARG_GENDER_FEMALE;
     }
 
-    public static int getGoal(String address) {
+    public static int getGoal() {
         ActivityUser activityUser = new ActivityUser();
 
         return activityUser.getStepsGoal();
     }
 
     public static byte getScreenTime(String address) {
-        return (byte) (prefs.getInt(HPlusConstants.PREF_HPLUS_SCREENTIME + "_" + address, 5) & 0xFF);
+        return (byte) (prefs.getInt(HPlusConstants.PREF_HPLUS_SCREENTIME, 5) & 0xFF);
     }
 
     public static byte getAllDayHR(String address) {
-        return (byte) (prefs.getInt(HPlusConstants.PREF_HPLUS_ALLDAYHR + "_" + address, HPlusConstants.ARG_HEARTRATE_ALLDAY_ON) & 0xFF);
-    }
+        Boolean value = (prefs.getBoolean(HPlusConstants.PREF_HPLUS_ALLDAYHR, true));
 
-    public static byte getHRState(String address) {
-        return (byte) (prefs.getInt(HPlusConstants.PREF_HPLUS_HR + "_" + address, HPlusConstants.ARG_HEARTRATE_MEASURE_ON) & 0xFF);
+        if(value){
+            return HPlusConstants.ARG_HEARTRATE_ALLDAY_ON;
+        }else{
+            return HPlusConstants.ARG_HEARTRATE_ALLDAY_OFF;
+        }
     }
 
     public static byte getSocial(String address) {
@@ -208,15 +266,30 @@ public class HPlusCoordinator extends AbstractDeviceCoordinator {
     }
 
     public static byte getUserWrist(String address) {
-        return (byte) (prefs.getInt(HPlusConstants.PREF_HPLUS_WRIST + "_" + address, 10) & 0xFF);
+        String value = prefs.getString(HPlusConstants.PREF_HPLUS_WRIST, getContext().getString(R.string.left));
+
+        if(value.equals(getContext().getString(R.string.left))){
+            return HPlusConstants.ARG_WRIST_LEFT;
+        }else{
+            return HPlusConstants.ARG_WRIST_RIGHT;
+        }
     }
 
     public static int getSITStartTime(String address) {
-        return prefs.getInt(HPlusConstants.PREF_HPLUS_SIT_START_TIME + "_" + address, 0);
+        return prefs.getInt(HPlusConstants.PREF_HPLUS_SIT_START_TIME, 0);
     }
 
     public static int getSITEndTime(String address) {
-        return prefs.getInt(HPlusConstants.PREF_HPLUS_SIT_END_TIME + "_" + address, 0);
+        return prefs.getInt(HPlusConstants.PREF_HPLUS_SIT_END_TIME, 0);
     }
 
+    public static void setUnicodeSupport(String address, boolean state){
+        SharedPreferences.Editor editor = prefs.getPreferences().edit();
+        editor.putBoolean(HPlusConstants.PREF_HPLUS_UNICODE + "_" + address, state);
+        editor.commit();
+    }
+
+    public static boolean getUnicodeSupport(String address){
+        return (prefs.getBoolean(HPlusConstants.PREF_HPLUS_UNICODE + "_" + address, false));
+    }
 }

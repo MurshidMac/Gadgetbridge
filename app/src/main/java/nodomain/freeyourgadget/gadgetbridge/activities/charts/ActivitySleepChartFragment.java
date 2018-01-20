@@ -1,3 +1,20 @@
+/*  Copyright (C) 2015-2017 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+    Gobbetti
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.activities.charts;
 
 import android.content.Context;
@@ -8,11 +25,12 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.github.mikephil.charting.animation.Easing;
-import com.github.mikephil.charting.charts.BarLineChartBase;
 import com.github.mikephil.charting.charts.Chart;
+import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.LegendEntry;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
+import com.github.mikephil.charting.data.LineData;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +48,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.ActivitySample;
 public class ActivitySleepChartFragment extends AbstractChartFragment {
     protected static final Logger LOG = LoggerFactory.getLogger(ActivitySleepChartFragment.class);
 
-    private BarLineChartBase mChart;
+    private LineChart mChart;
 
     private int mSmartAlarmFrom = -1;
     private int mSmartAlarmTo = -1;
@@ -42,7 +60,7 @@ public class ActivitySleepChartFragment extends AbstractChartFragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_charts, container, false);
 
-        mChart = (BarLineChartBase) rootView.findViewById(R.id.activitysleepchart);
+        mChart = (LineChart) rootView.findViewById(R.id.activitysleepchart);
 
         setupChart();
 
@@ -119,7 +137,7 @@ public class ActivitySleepChartFragment extends AbstractChartFragment {
         mChart.getLegend().setTextColor(LEGEND_TEXT_COLOR);
         mChart.setData(null); // workaround for https://github.com/PhilJay/MPAndroidChart/issues/2317
         mChart.getXAxis().setValueFormatter(dcd.getXValueFormatter());
-        mChart.setData(dcd.getData());
+        mChart.setData((LineData) dcd.getData());
     }
 
     @Override

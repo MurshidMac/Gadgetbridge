@@ -1,3 +1,19 @@
+/*  Copyright (C) 2016-2017 Carsten Pfeiffer
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.devices.miband2.operations;
 
 import android.bluetooth.BluetoothGatt;
@@ -101,7 +117,9 @@ public class InitOperation extends AbstractBTLEOperation<MiBand2Support> {
                     TransactionBuilder builder = createTransactionBuilder("Authenticated, now initialize phase 2");
                     builder.add(new SetDeviceStateAction(getDevice(), GBDevice.State.INITIALIZING, getContext()));
                     getSupport().requestDeviceInfo(builder);
+                    getSupport().enableFurtherNotifications(builder, true);
                     getSupport().phase2Initialize(builder);
+                    getSupport().phase3Initialize(builder);
                     getSupport().setInitialized(builder);
                     getSupport().performImmediately(builder);
                 } else {

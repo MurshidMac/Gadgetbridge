@@ -1,3 +1,20 @@
+/*  Copyright (C) 2015-2017 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+    Gobbetti
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service;
 
 import android.app.Notification;
@@ -9,6 +26,8 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.FileProvider;
 import android.support.v4.content.LocalBroadcastManager;
 import android.telephony.SmsManager;
 
@@ -20,10 +39,12 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Objects;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.activities.FindPhoneActivity;
 import nodomain.freeyourgadget.gadgetbridge.activities.appmanager.AbstractAppManagerFragment;
 import nodomain.freeyourgadget.gadgetbridge.activities.charts.ChartsHost;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEvent;
@@ -31,6 +52,7 @@ import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventAppInfo;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventBatteryInfo;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventCallControl;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventDisplayMessage;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventFindPhone;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventMusicControl;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventNotificationControl;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventScreenshot;
@@ -66,6 +88,14 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
         this.gbDevice = gbDevice;
         this.btAdapter = btAdapter;
         this.context = context;
+    }
+
+    /**
+     * Default implementation just calls #connect()
+     */
+    @Override
+    public boolean connectFirstTime() {
+        return connect();
     }
 
     @Override
@@ -125,10 +155,29 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
             handleGBDeviceEvent((GBDeviceEventNotificationControl) deviceEvent);
         } else if (deviceEvent instanceof GBDeviceEventBatteryInfo) {
             handleGBDeviceEvent((GBDeviceEventBatteryInfo) deviceEvent);
+        } else if (deviceEvent instanceof GBDeviceEventFindPhone) {
+            handleGBDeviceEvent((GBDeviceEventFindPhone) deviceEvent);
         }
     }
 
-    public void handleGBDeviceEvent(GBDeviceEventMusicControl musicEvent) {
+    private void handleGBDeviceEvent(GBDeviceEventFindPhone deviceEvent) {
+        Context context = getContext();
+        LOG.info("Got GBDeviceEventFindPhone");
+        switch (deviceEvent.event) {
+            case START:
+                Intent startIntent = new Intent(getContext(), FindPhoneActivity.class);
+                context.startActivity(startIntent);
+                break;
+            case STOP:
+                Intent intent = new Intent(FindPhoneActivity.ACTION_FOUND);
+                LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+                break;
+            default:
+                LOG.warn("unknown GBDeviceEventFindPhone");
+        }
+    }
+
+    private void handleGBDeviceEvent(GBDeviceEventMusicControl musicEvent) {
         Context context = getContext();
         LOG.info("Got event for MUSIC_CONTROL");
         Intent musicIntent = new Intent(GBMusicControlReceiver.ACTION_MUSICCONTROL);
@@ -137,7 +186,7 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
         context.sendBroadcast(musicIntent);
     }
 
-    public void handleGBDeviceEvent(GBDeviceEventCallControl callEvent) {
+    private void handleGBDeviceEvent(GBDeviceEventCallControl callEvent) {
         Context context = getContext();
         LOG.info("Got event for CALL_CONTROL");
         Intent callIntent = new Intent(GBCallControlReceiver.ACTION_CALLCONTROL);
@@ -146,7 +195,7 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
         context.sendBroadcast(callIntent);
     }
 
-    public void handleGBDeviceEvent(GBDeviceEventVersionInfo infoEvent) {
+    protected void handleGBDeviceEvent(GBDeviceEventVersionInfo infoEvent) {
         Context context = getContext();
         LOG.info("Got event for VERSION_INFO");
         if (gbDevice == null) {
@@ -157,7 +206,7 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
         gbDevice.sendDeviceUpdateIntent(context);
     }
 
-    public void handleGBDeviceEvent(GBDeviceEventAppInfo appInfoEvent) {
+    private void handleGBDeviceEvent(GBDeviceEventAppInfo appInfoEvent) {
         Context context = getContext();
         LOG.info("Got event for APP_INFO");
 
@@ -173,7 +222,7 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
         LocalBroadcastManager.getInstance(context).sendBroadcast(appInfoIntent);
     }
 
-    public void handleGBDeviceEvent(GBDeviceEventSleepMonitorResult sleepMonitorResult) {
+    private void handleGBDeviceEvent(GBDeviceEventSleepMonitorResult sleepMonitorResult) {
         Context context = getContext();
         LOG.info("Got event for SLEEP_MONIOR_RES");
         Intent sleepMontiorIntent = new Intent(ChartsHost.REFRESH);
@@ -186,7 +235,7 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
     }
 
     private void handleGBDeviceEvent(GBDeviceEventScreenshot screenshot) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd-hhmmss");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd-hhmmss", Locale.US);
         String filename = "screenshot_" + dateFormat.format(new Date()) + ".bmp";
 
         try {
@@ -194,30 +243,31 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
             Bitmap bmp = BitmapFactory.decodeFile(fullpath);
             Intent intent = new Intent();
             intent.setAction(android.content.Intent.ACTION_VIEW);
-            intent.setDataAndType(Uri.fromFile(new File(fullpath)), "image/*");
+            Uri screenshotURI = FileProvider.getUriForFile(context, context.getApplicationContext().getPackageName() + ".screenshot_provider", new File(fullpath));
+            intent.setDataAndType(screenshotURI, "image/*");
 
             PendingIntent pIntent = PendingIntent.getActivity(context, 0, intent, 0);
 
             Intent shareIntent = new Intent(Intent.ACTION_SEND);
             shareIntent.setType("image/*");
-            shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(new File(fullpath)));
+            shareIntent.putExtra(Intent.EXTRA_STREAM, screenshotURI);
 
             PendingIntent pendingShareIntent = PendingIntent.getActivity(context, 0, Intent.createChooser(shareIntent, "share screenshot"),
                     PendingIntent.FLAG_UPDATE_CURRENT);
 
-            Notification notif = new Notification.Builder(context)
+            NotificationCompat.Action action = new NotificationCompat.Action.Builder(android.R.drawable.ic_menu_share, "share", pendingShareIntent).build();
+
+            Notification notif = new NotificationCompat.Builder(context)
                     .setContentTitle("Screenshot taken")
                     .setTicker("Screenshot taken")
                     .setContentText(filename)
                     .setSmallIcon(R.drawable.ic_notification)
-                    .setStyle(new Notification.BigPictureStyle()
+                    .setStyle(new NotificationCompat.BigPictureStyle()
                             .bigPicture(bmp))
                     .setContentIntent(pIntent)
-                    .addAction(android.R.drawable.ic_menu_share, "share", pendingShareIntent)
+                    .addAction(action)
+                    .setAutoCancel(true)
                     .build();
-
-
-            notif.flags |= Notification.FLAG_AUTO_CANCEL;
 
             NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             nm.notify(NOTIFICATION_ID_SCREENSHOT, notif);
@@ -271,7 +321,7 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
         }
     }
 
-    public void handleGBDeviceEvent(GBDeviceEventBatteryInfo deviceEvent) {
+    protected void handleGBDeviceEvent(GBDeviceEventBatteryInfo deviceEvent) {
         Context context = getContext();
         LOG.info("Got BATTERY_INFO device event");
         gbDevice.setBatteryLevel(deviceEvent.level);
@@ -289,6 +339,8 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
                                     context.getString(R.string.notif_battery_low_bigtext_number_of_charges, String.valueOf(deviceEvent.numCharges))
                             : ""
                     , context);
+        } else {
+            GB.removeBatteryNotification(context);
         }
 
         gbDevice.sendDeviceUpdateIntent(context);

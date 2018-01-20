@@ -1,18 +1,33 @@
+/*  Copyright (C) 2016-2017 Andreas Shimokawa, Daniele Gobbetti
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.model;
 
-import ru.gelin.android.weather.notification.ParcelableWeather2;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Weather {
-    private ParcelableWeather2 weather2 = null;
+    private static final Logger LOG = LoggerFactory.getLogger(Weather.class);
+
     private WeatherSpec weatherSpec = null;
 
-    public ParcelableWeather2 getWeather2() {
-        return weather2;
-    }
-
-    public void setWeather2(ParcelableWeather2 weather2) {
-        this.weather2 = weather2;
-    }
+    private JSONObject reconstructedOWMForecast = null;
 
     public WeatherSpec getWeatherSpec() {
         return weatherSpec;
@@ -20,6 +35,46 @@ public class Weather {
 
     public void setWeatherSpec(WeatherSpec weatherSpec) {
         this.weatherSpec = weatherSpec;
+    }
+
+    public JSONObject createReconstructedOWMWeatherReply() {
+        if (weatherSpec == null) {
+            return null;
+        }
+        JSONObject reconstructedOWMWeather = new JSONObject();
+        JSONArray weather = new JSONArray();
+        JSONObject condition = new JSONObject();
+        JSONObject main = new JSONObject();
+
+        try {
+            condition.put("id", weatherSpec.currentConditionCode);
+            condition.put("main", weatherSpec.currentCondition);
+            condition.put("icon", Weather.mapToOpenWeatherMapIcon(weatherSpec.currentConditionCode));
+            weather.put(condition);
+
+            main.put("temp", weatherSpec.currentTemp);
+            main.put("humidity", weatherSpec.currentHumidity);
+            main.put("temp_min", weatherSpec.todayMinTemp);
+            main.put("temp_max", weatherSpec.todayMaxTemp);
+            main.put("name", weatherSpec.location);
+
+            reconstructedOWMWeather.put("weather", weather);
+            reconstructedOWMWeather.put("main", main);
+
+        } catch (JSONException e) {
+            LOG.error("Error while reconstructing OWM weather reply");
+            return null;
+        }
+        LOG.debug("Weather JSON for WEBVIEW: " + reconstructedOWMWeather.toString());
+        return reconstructedOWMWeather;
+    }
+
+    public JSONObject getReconstructedOWMForecast() {
+        return reconstructedOWMForecast;
+    }
+
+    public void setReconstructedOWMForecast(JSONObject reconstructedOWMForecast) {
+        this.reconstructedOWMForecast = reconstructedOWMForecast;
     }
 
     private static final Weather weather = new Weather();
@@ -261,6 +316,35 @@ public class Weather {
         }
     }
 
+    public static String mapToOpenWeatherMapIcon(int openWeatherMapCondition) {
+        //see https://openweathermap.org/weather-conditions
+        String condition = "02d"; //generic "variable" icon
+
+        if (openWeatherMapCondition >= 200 && openWeatherMapCondition < 300) {
+            condition = "11d";
+        } else if (openWeatherMapCondition >= 300 && openWeatherMapCondition < 500) {
+            condition = "09d";
+        } else if (openWeatherMapCondition >= 500 && openWeatherMapCondition < 510) {
+            condition = "10d";
+        } else if (openWeatherMapCondition >= 511 && openWeatherMapCondition < 600) {
+            condition = "09d";
+        } else if (openWeatherMapCondition >= 600 && openWeatherMapCondition < 700) {
+            condition = "13d";
+        } else if (openWeatherMapCondition >= 700 && openWeatherMapCondition < 800) {
+            condition = "50d";
+        } else if (openWeatherMapCondition == 800) {
+            condition = "01d"; //TODO: night?
+        } else if (openWeatherMapCondition == 801) {
+            condition = "02d"; //TODO: night?
+        } else if (openWeatherMapCondition == 802) {
+            condition = "03d"; //TODO: night?
+        } else if (openWeatherMapCondition == 803 || openWeatherMapCondition == 804) {
+            condition = "04d"; //TODO: night?
+        }
+
+        return condition;
+    }
+
     public static int mapToOpenWeatherMapCondition(int yahooCondition) {
         switch (yahooCondition) {
 //yahoo weather conditions:
@@ -346,6 +430,166 @@ public class Weather {
             case 3200:  //not available
             default:
                 return -1;
+        }
+    }
+
+    public static String getConditionString(int openWeatherMapCondition) {
+        switch (openWeatherMapCondition) {
+            case 200:
+                return "thunderstorm with light rain";
+            case 201:
+                return "thunderstorm with rain";
+            case 202:
+                return "thunderstorm with heavy rain";
+            case 210:
+                return "light thunderstorm:";
+            case 211:
+                return "thunderstorm";
+            case 230:
+                return "thunderstorm with light drizzle";
+            case 231:
+                return "thunderstorm with drizzle";
+            case 232:
+                return "thunderstorm with heavy drizzle";
+            case 212:
+                return "heavy thunderstorm";
+            case 221:
+                return "ragged thunderstorm";
+            //Group 3xx: Drizzle
+            case 300:
+                return "light intensity drizzle";
+            case 301:
+                return "drizzle";
+            case 302:
+                return "heavy intensity drizzle";
+            case 310:
+                return "light intensity drizzle rain";
+            case 311:
+                return "drizzle rain";
+            case 312:
+                return "heavy intensity drizzle rain";
+            case 313:
+                return "shower rain and drizzle";
+            case 314:
+                return "heavy shower rain and drizzle";
+            case 321:
+                return "shower drizzle";
+            //Group 5xx: Rain
+            case 500:
+                return "light rain";
+            case 501:
+                return "moderate rain";
+            case 502:
+                return "heavy intensity rain";
+            case 503:
+                return "very heavy rain";
+            case 504:
+                return "extreme rain";
+            case 511:
+                return "freezing rain";
+            case 520:
+                return "light intensity shower rain";
+            case 521:
+                return "shower rain";
+            case 522:
+                return "heavy intensity shower rain";
+            case 531:
+                return "ragged shower rain";
+            //Group 6xx: Snow
+            case 600:
+                return "light snow";
+            case 601:
+                return "snow";
+            case 620:
+                return "light shower snow";
+            case 602:
+                return "heavy snow";
+            case 611:
+                return "sleet";
+            case 612:
+                return "shower sleet";
+            case 621:
+                return "shower snow";
+            case 622:
+                return "heavy shower snow";
+            case 615:
+                return "light rain and snow";
+            case 616:
+                return "rain and snow";
+            //Group 7xx: Atmosphere
+            case 701:
+                return "mist";
+            case 711:
+                return "smoke";
+            case 721:
+                return "haze";
+            case 731:
+                return "sandcase dust whirls";
+            case 741:
+                return "fog";
+            case 751:
+                return "sand";
+            case 761:
+                return "dust";
+            case 762:
+                return "volcanic ash";
+            case 771:
+                return "squalls";
+            case 781:
+                return "tornado";
+            case 900:
+                return "tornado";
+            case 800:
+                return "clear sky";
+            //Group 80x: Clouds
+            case 801:
+                return "few clouds";
+            case 802:
+                return "scattered clouds";
+            case 803:
+                return "broken clouds";
+            case 804:
+                return "overcast clouds";
+            //Group 90x: Extreme
+            case 901:
+                return "tropical storm";
+            case 903:
+                return "cold";
+            case 904:
+                return "hot";
+            case 905:
+                return "windy";
+            case 906:
+                return "hail";
+            //Group 9xx: Additional
+            case 951:
+                return "calm";
+            case 952:
+                return "light breeze";
+            case 953:
+                return "gentle breeze";
+            case 954:
+                return "moderate breeze";
+            case 955:
+                return "fresh breeze";
+            case 956:
+                return "strong breeze";
+            case 957:
+                return "high windcase  near gale";
+            case 958:
+                return "gale";
+            case 959:
+                return "severe gale";
+            case 960:
+                return "storm";
+            case 961:
+                return "violent storm";
+            case 902:
+                return "hurricane";
+            case 962:
+                return "hurricane";
+            default:
+                return "";
         }
     }
 }

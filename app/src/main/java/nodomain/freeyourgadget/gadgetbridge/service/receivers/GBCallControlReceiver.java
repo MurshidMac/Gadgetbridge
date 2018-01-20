@@ -1,3 +1,19 @@
+/*  Copyright (C) 2015-2017 Andreas Shimokawa, Carsten Pfeiffer
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.receivers;
 
 import android.content.BroadcastReceiver;
@@ -23,6 +39,7 @@ public class GBCallControlReceiver extends BroadcastReceiver {
         GBDeviceEventCallControl.Event callCmd = GBDeviceEventCallControl.Event.values()[intent.getIntExtra("event", 0)];
         switch (callCmd) {
             case END:
+            case REJECT:
             case START:
                 try {
                     TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
@@ -30,7 +47,7 @@ public class GBCallControlReceiver extends BroadcastReceiver {
                     Method method = clazz.getDeclaredMethod("getITelephony");
                     method.setAccessible(true);
                     ITelephony telephonyService = (ITelephony) method.invoke(telephonyManager);
-                    if (callCmd == GBDeviceEventCallControl.Event.END) {
+                    if (callCmd == GBDeviceEventCallControl.Event.END || callCmd == GBDeviceEventCallControl.Event.REJECT) {
                         telephonyService.endCall();
                     } else {
                         telephonyService.answerRingingCall();

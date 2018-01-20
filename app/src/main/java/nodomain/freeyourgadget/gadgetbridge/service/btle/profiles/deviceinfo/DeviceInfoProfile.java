@@ -1,3 +1,19 @@
+/*  Copyright (C) 2016-2017 Andreas Shimokawa, Carsten Pfeiffer
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.btle.profiles.deviceinfo;
 
 import android.bluetooth.BluetoothGatt;
@@ -94,49 +110,49 @@ public class DeviceInfoProfile<T extends AbstractBTLEDeviceSupport> extends Abst
 
 
     private void handleManufacturerName(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-        String name = characteristic.getStringValue(0);
+        String name = characteristic.getStringValue(0).trim();
         deviceInfo.setManufacturerName(name);
         notify(createIntent(deviceInfo));
     }
 
     private void handleModelNumber(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-        String modelNumber = characteristic.getStringValue(0);
+        String modelNumber = characteristic.getStringValue(0).trim();
         deviceInfo.setModelNumber(modelNumber);
         notify(createIntent(deviceInfo));
     }
     private void handleSerialNumber(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-        String serialNumber = characteristic.getStringValue(0);
+        String serialNumber = characteristic.getStringValue(0).trim();
         deviceInfo.setSerialNumber(serialNumber);
         notify(createIntent(deviceInfo));
     }
 
     private void handleHardwareRevision(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-        String hardwareRevision = characteristic.getStringValue(0);
+        String hardwareRevision = characteristic.getStringValue(0).trim();
         deviceInfo.setHardwareRevision(hardwareRevision);
         notify(createIntent(deviceInfo));
     }
 
     private void handleFirmwareRevision(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-        String firmwareRevision = characteristic.getStringValue(0);
+        String firmwareRevision = characteristic.getStringValue(0).trim();
         deviceInfo.setFirmwareRevision(firmwareRevision);
         notify(createIntent(deviceInfo));
     }
 
     private void handleSoftwareRevision(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-        String softwareRevision = characteristic.getStringValue(0);
+        String softwareRevision = characteristic.getStringValue(0).trim();
         deviceInfo.setSoftwareRevision(softwareRevision);
         notify(createIntent(deviceInfo));
     }
 
     private void handleSystemId(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-        String systemId = characteristic.getStringValue(0);
+        String systemId = characteristic.getStringValue(0).trim();
         deviceInfo.setSystemId(systemId);
         notify(createIntent(deviceInfo));
     }
 
     private void handleRegulatoryCertificationData(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
         // TODO: regulatory certification data list not supported yet
-//        String regulatoryCertificationData = characteristic.getStringValue(0);
+//        String regulatoryCertificationData = characteristic.getStringValue(0).trim();
 //        deviceInfo.setRegulatoryCertificationDataList(regulatoryCertificationData);
 //        notify(createIntent(deviceInfo));
     }

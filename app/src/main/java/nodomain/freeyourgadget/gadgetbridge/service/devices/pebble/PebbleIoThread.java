@@ -1,3 +1,20 @@
+/*  Copyright (C) 2015-2017 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+    Gobbetti, Julien Pivotto, Uwe Hermann
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.devices.pebble;
 
 import android.bluetooth.BluetoothAdapter;
@@ -8,6 +25,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.ParcelUuid;
 import android.support.v4.content.LocalBroadcastManager;
+import android.webkit.ValueCallback;
+import android.webkit.WebView;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +45,7 @@ import java.nio.ByteOrder;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.activities.ExternalPebbleJSActivity;
 import nodomain.freeyourgadget.gadgetbridge.activities.appmanager.AbstractAppManagerFragment;
 import nodomain.freeyourgadget.gadgetbridge.activities.appmanager.AppManagerActivity;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEvent;
@@ -33,6 +53,7 @@ import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventAppInfo;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventAppManagement;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventAppMessage;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventVersionInfo;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.pebble.GBDeviceEventDataLogging;
 import nodomain.freeyourgadget.gadgetbridge.devices.pebble.PBWReader;
 import nodomain.freeyourgadget.gadgetbridge.devices.pebble.PebbleInstallable;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
@@ -40,10 +61,10 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceApp;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.pebble.ble.PebbleLESupport;
 import nodomain.freeyourgadget.gadgetbridge.service.serial.GBDeviceIoThread;
 import nodomain.freeyourgadget.gadgetbridge.service.serial.GBDeviceProtocol;
-import nodomain.freeyourgadget.gadgetbridge.util.FileUtils;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 import nodomain.freeyourgadget.gadgetbridge.util.PebbleUtils;
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
+import nodomain.freeyourgadget.gadgetbridge.util.WebViewSingleton;
 
 class PebbleIoThread extends GBDeviceIoThread {
     private static final Logger LOG = LoggerFactory.getLogger(PebbleIoThread.class);
@@ -79,12 +100,54 @@ class PebbleIoThread extends GBDeviceIoThread {
     private int mBinarySize = -1;
     private int mBytesWritten = -1;
 
+    private void sendAppMessageJS(GBDeviceEventAppMessage appMessage) {
+        sendAppMessage(appMessage);
+        if (appMessage.type == GBDeviceEventAppMessage.TYPE_APPMESSAGE) {
+            write(mPebbleProtocol.encodeApplicationMessageAck(appMessage.appUUID, (byte) appMessage.id));
+        }
+    }
+
+    public static void sendAppMessage(GBDeviceEventAppMessage message) {
+        final String jsEvent;
+        try {
+            WebViewSingleton.checkAppRunning(message.appUUID);
+        } catch (IllegalStateException ex) {
+            LOG.warn("Unable to send app message: " + message, ex);
+            return;
+        }
+
+        // TODO: handle ACK and NACK types with ids
+        if (message.type != GBDeviceEventAppMessage.TYPE_APPMESSAGE) {
+            jsEvent = (GBDeviceEventAppMessage.TYPE_NACK == GBDeviceEventAppMessage.TYPE_APPMESSAGE) ? "NACK" + message.id : "ACK" + message.id;
+            LOG.debug("WEBVIEW received ACK/NACK:" + message.message + " for uuid: " + message.appUUID + " ID: " + message.id);
+        } else {
+            jsEvent = "appmessage";
+        }
+
+        final String appMessage = PebbleUtils.parseIncomingAppMessage(message.message, message.appUUID);
+        LOG.debug("to WEBVIEW: event: " + jsEvent + " message: " + appMessage);
+        WebViewSingleton.invokeWebview(new WebViewSingleton.WebViewRunnable() {
+            @Override
+            public void invoke(WebView webView) {
+                webView.evaluateJavascript("Pebble.evaluate('" + jsEvent + "',[" + appMessage + "]);", new ValueCallback<String>() {
+                    @Override
+                    public void onReceiveValue(String s) {
+                        //TODO: the message should be acked here instead of in PebbleIoThread
+                        LOG.debug("Callback from appmessage: " + s);
+                    }
+                });
+            }
+        });
+    }
+
     PebbleIoThread(PebbleSupport pebbleSupport, GBDevice gbDevice, GBDeviceProtocol gbDeviceProtocol, BluetoothAdapter btAdapter, Context context) {
         super(gbDevice, context);
         mPebbleProtocol = (PebbleProtocol) gbDeviceProtocol;
         mBtAdapter = btAdapter;
         mPebbleSupport = pebbleSupport;
         mEnablePebblekit = prefs.getBoolean("pebble_enable_pebblekit", false);
+        mPebbleProtocol.setAlwaysACKPebbleKit(prefs.getBoolean("pebble_always_ack_pebblekit", false));
+        mPebbleProtocol.setEnablePebbleKit(mEnablePebblekit);
     }
 
     private int readWithException(InputStream inputStream, byte[] buffer, int byteOffset, int byteCount) throws IOException {
@@ -135,8 +198,16 @@ class PebbleIoThread extends GBDeviceIoThread {
                     mOutStream = mBtSocket.getOutputStream();
                 }
             }
+            if (GBApplication.getGBPrefs().isBackgroundJsEnabled()) {
+                Intent startIntent = new Intent(getContext(), ExternalPebbleJSActivity.class);
+                startIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startIntent.putExtra(ExternalPebbleJSActivity.START_BG_WEBVIEW, true);
+                getContext().startActivity(startIntent);
+            } else {
+                LOG.debug("Not enabling background Webview, is disabled in preferences.");
+            }
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.warn("error while connecting: " + e.getMessage(), e);
             gbDevice.setState(originalState);
             gbDevice.sendDeviceUpdateIntent(getContext());
 
@@ -351,6 +422,11 @@ class PebbleIoThread extends GBDeviceIoThread {
         } else {
             gbDevice.setState(GBDevice.State.WAITING_FOR_RECONNECT);
         }
+
+        if (GBApplication.getGBPrefs().isBackgroundJsEnabled()) {
+            WebViewSingleton.disposeWebView();
+        }
+
         gbDevice.sendDeviceUpdateIntent(getContext());
     }
 
@@ -464,7 +540,7 @@ class PebbleIoThread extends GBDeviceIoThread {
                         case REQUEST:
                             LOG.info("APPFETCH request: " + appMgmt.uuid + " / " + appMgmt.token);
                             try {
-                                installApp(Uri.fromFile(new File(FileUtils.getExternalFilesDir() + "/pbw-cache/" + appMgmt.uuid.toString() + ".pbw")), appMgmt.token);
+                                installApp(Uri.fromFile(new File(PebbleUtils.getPbwCacheDir(),appMgmt.uuid.toString() + ".pbw")), appMgmt.token);
                             } catch (IOException e) {
                                 LOG.error("Error installing app: " + e.getMessage(), e);
                             }
@@ -475,6 +551,13 @@ class PebbleIoThread extends GBDeviceIoThread {
                     break;
                 case START:
                     LOG.info("got GBDeviceEventAppManagement START event for uuid: " + appMgmt.uuid);
+                    if (GBApplication.getGBPrefs().isBackgroundJsEnabled()) {
+                        if (mPebbleProtocol.hasAppMessageHandler(appMgmt.uuid)) {
+                            WebViewSingleton.stopJavascriptInterface();
+                        } else {
+                            WebViewSingleton.runJavascriptInterface(gbDevice, appMgmt.uuid);
+                        }
+                    }
                     break;
                 default:
                     break;
@@ -486,10 +569,20 @@ class PebbleIoThread extends GBDeviceIoThread {
             setInstallSlot(appInfoEvent.freeSlot);
             return false;
         } else if (deviceEvent instanceof GBDeviceEventAppMessage) {
+            if (GBApplication.getGBPrefs().isBackgroundJsEnabled()) {
+                sendAppMessageJS((GBDeviceEventAppMessage) deviceEvent);
+            }
             if (mEnablePebblekit) {
                 LOG.info("Got AppMessage event");
-                if (mPebbleKitSupport != null) {
+                if (mPebbleKitSupport != null && ((GBDeviceEventAppMessage) deviceEvent).type == GBDeviceEventAppMessage.TYPE_APPMESSAGE) {
                     mPebbleKitSupport.sendAppMessageIntent((GBDeviceEventAppMessage) deviceEvent);
+                }
+            }
+        } else if (deviceEvent instanceof GBDeviceEventDataLogging) {
+            if (mEnablePebblekit) {
+                LOG.info("Got Datalogging event");
+                if (mPebbleKitSupport != null) {
+                    mPebbleKitSupport.sendDataLoggingIntent((GBDeviceEventDataLogging) deviceEvent);
                 }
             }
         }
@@ -516,20 +609,6 @@ class PebbleIoThread extends GBDeviceIoThread {
     }
 
     void installApp(Uri uri, int appId) {
-        if (uri.equals(Uri.parse("fake://health"))) {
-            write(mPebbleProtocol.encodeActivateHealth(true));
-            write(mPebbleProtocol.encodeSetSaneDistanceUnit(true));
-            return;
-        }
-        if (uri.equals(Uri.parse("fake://hrm"))) {
-            write(mPebbleProtocol.encodeActivateHRM(true));
-            return;
-        }
-        if (uri.equals(Uri.parse("fake://weather"))) {
-            write(mPebbleProtocol.encodeActivateWeather(true));
-            return;
-        }
-
         if (mIsInstalling) {
             return;
         }

@@ -1,3 +1,20 @@
+/*  Copyright (C) 2015-2017 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+    Gobbetti, Lem Dulfo
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.activities;
 
 import android.content.BroadcastReceiver;
@@ -34,7 +51,7 @@ import nodomain.freeyourgadget.gadgetbridge.util.DeviceHelper;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 
 
-public class FwAppInstallerActivity extends GBActivity implements InstallActivity {
+public class FwAppInstallerActivity extends AbstractGBActivity implements InstallActivity {
 
     private static final Logger LOG = LoggerFactory.getLogger(FwAppInstallerActivity.class);
     private static final String ITEM_DETAILS = "details";
@@ -59,9 +76,7 @@ public class FwAppInstallerActivity extends GBActivity implements InstallActivit
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if (GBApplication.ACTION_QUIT.equals(action)) {
-                finish();
-            } else if (GBDevice.ACTION_DEVICE_CHANGED.equals(action)) {
+            if (GBDevice.ACTION_DEVICE_CHANGED.equals(action)) {
                 device = intent.getParcelableExtra(GBDevice.EXTRA_DEVICE);
                 if (device != null) {
                     refreshBusyState(device);
@@ -137,7 +152,6 @@ public class FwAppInstallerActivity extends GBActivity implements InstallActivit
         detailsListView.setAdapter(mDetailsItemAdapter);
         setInstallEnabled(false);
         IntentFilter filter = new IntentFilter();
-        filter.addAction(GBApplication.ACTION_QUIT);
         filter.addAction(GBDevice.ACTION_DEVICE_CHANGED);
         filter.addAction(GB.ACTION_DISPLAY_MESSAGE);
         LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver, filter);
@@ -205,6 +219,11 @@ public class FwAppInstallerActivity extends GBActivity implements InstallActivit
     @Override
     public void setInfoText(String text) {
         fwAppInstallTextView.setText(text);
+    }
+
+    @Override
+    public CharSequence getInfoText() {
+        return fwAppInstallTextView.getText();
     }
 
     @Override

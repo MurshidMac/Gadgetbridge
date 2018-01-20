@@ -1,3 +1,20 @@
+/*  Copyright (C) 2015-2017 Andreas Shimokawa, Carsten Pfeiffer, Frank Slezak,
+    ivanovlev, JohnnySun, Julien Pivotto, Kasha, Steffen Liebergeld
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.model;
 
 import android.support.annotation.Nullable;
@@ -41,6 +58,7 @@ public interface DeviceService extends EventHandler {
     String ACTION_REALTIME_SAMPLES = PREFIX + ".action.realtime_samples";
     String ACTION_ENABLE_REALTIME_HEARTRATE_MEASUREMENT = PREFIX + ".action.realtime_hr_measurement";
     String ACTION_ENABLE_HEARTRATE_SLEEP_SUPPORT = PREFIX + ".action.enable_heartrate_sleep_support";
+    String ACTION_SET_HEARTRATE_MEASUREMENT_INTERVAL = PREFIX + ".action.set_heartrate_measurement_intervarl";
     String ACTION_HEARTRATE_MEASUREMENT = PREFIX + ".action.hr_measurement";
     String ACTION_ADD_CALENDAREVENT = PREFIX + ".action.add_calendarevent";
     String ACTION_DELETE_CALENDAREVENT = PREFIX + ".action.delete_calendarevent";
@@ -56,6 +74,7 @@ public interface DeviceService extends EventHandler {
     String EXTRA_NOTIFICATION_SUBJECT = "notification_subject";
     String EXTRA_NOTIFICATION_TITLE = "notification_title";
     String EXTRA_NOTIFICATION_TYPE = "notification_type";
+    String EXTRA_NOTIFICATION_PEBBLE_COLOR = "notification_pebble_color";
     String EXTRA_FIND_START = "find_start";
     String EXTRA_VIBRATION_INTENSITY = "vibration_intensity";
     String EXTRA_CALL_COMMAND = "call_command";
@@ -77,22 +96,15 @@ public interface DeviceService extends EventHandler {
     String EXTRA_APP_UUID = "app_uuid";
     String EXTRA_APP_START = "app_start";
     String EXTRA_APP_CONFIG = "app_config";
+    String EXTRA_APP_CONFIG_ID = "app_config_id";
     String EXTRA_URI = "uri";
     String EXTRA_CONFIG = "config";
     String EXTRA_ALARMS = "alarms";
-    String EXTRA_PERFORM_PAIR = "perform_pair";
+    String EXTRA_CONNECT_FIRST_TIME = "connect_first_time";
     String EXTRA_BOOLEAN_ENABLE = "enable_realtime_steps";
+    String EXTRA_INTERVAL_SECONDS = "interval_seconds";
 
-    String EXTRA_WEATHER_TIMESTAMP = "weather_timestamp";
-    String EXTRA_WEATHER_LOCATION = "weather_location";
-    String EXTRA_WEATHER_CURRENTTEMP = "weather_currenttemp";
-    String EXTRA_WEATHER_CURRENTCONDITIONCODE = "weather_currentconditioncode";
-    String EXTRA_WEATHER_CURRENTCONDITION = "currentcondition";
-    String EXTRA_WEATHER_TODAYMAXTEMP = "weather_todaymaxtemp";
-    String EXTRA_WEATHER_TODAYMINTEMP = "weather_todaymintemp";
-    String EXTRA_WEATHER_TOMORROWMAXTEMP = "weather_tomorrowmaxtemp";
-    String EXTRA_WEATHER_TOMORROWMINTEMP = "weather_tomorrowmintemp";
-    String EXTRA_WEATHER_TOMORROWCONDITIONCODE = "weather_tomorrowconditioncode";
+    String EXTRA_WEATHER = "weather";
 
     /**
      * Use EXTRA_REALTIME_SAMPLE instead
@@ -112,6 +124,7 @@ public interface DeviceService extends EventHandler {
     String EXTRA_CALENDAREVENT_DURATION = "calendarevent_duration";
     String EXTRA_CALENDAREVENT_TITLE = "calendarevent_title";
     String EXTRA_CALENDAREVENT_DESCRIPTION = "calendarevent_description";
+    String EXTRA_CALENDAREVENT_LOCATION = "calendarevent_location";
 
     void start();
 

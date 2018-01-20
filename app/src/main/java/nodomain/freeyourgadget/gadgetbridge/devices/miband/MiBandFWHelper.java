@@ -1,3 +1,20 @@
+/*  Copyright (C) 2015-2017 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+    Gobbetti
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.devices.miband;
 
 import android.content.Context;
@@ -9,6 +26,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.miband.AbstractMiFirmwareInfo;
 
@@ -43,11 +62,18 @@ public class MiBandFWHelper extends AbstractMiBandFWHelper {
             68094986, // 4.15.12.10 tested by developer
             68158215, // 4.16.3.7 tested by developer
             68158486, // 4.16.4.22 tested by developer and user
+            68160271, // 4.16.11.15 tested by developer
             84870926, // 5.15.7.14 tested by developer
     };
 
     public MiBandFWHelper(Uri uri, Context context) throws IOException {
         super(uri, context);
+    }
+
+    @NonNull
+    @Override
+    public String getFirmwareKind() {
+        return GBApplication.getContext().getString(R.string.kind_firmware);
     }
 
     @Override

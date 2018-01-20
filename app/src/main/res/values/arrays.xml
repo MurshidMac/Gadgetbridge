@@ -135,4 +135,103 @@
         <item>@string/p_dateformat_datetime</item>
     </string-array>
 
+    <string-array name="mi2_do_not_disturb">
+        <item>@string/mi2_dnd_off</item>
+        <item>@string/mi2_dnd_automatic</item>
+        <item>@string/mi2_dnd_scheduled</item>
+    </string-array>
+    <string-array name="mi2_do_not_disturb_values">
+        <item>@string/p_off</item>
+        <item>@string/p_automatic</item>
+        <item>@string/p_scheduled</item>
+    </string-array>
+
+    <string-array name="pref_mi2_display_items">
+        <item>@string/chart_steps</item>
+        <item>@string/distance</item>
+        <item>@string/calories</item>
+        <item>@string/heart_rate</item>
+        <item>@string/battery</item>
+    </string-array>
+    <string-array name="pref_mi2_display_items_values">
+        <item>@string/p_steps</item>
+        <item>@string/p_distance</item>
+        <item>@string/p_calories</item>
+        <item>@string/p_heart_rate</item>
+        <item>@string/p_battery</item>
+    </string-array>
+    <string-array name="pref_mi2_display_items_default">
+        <item>@string/p_steps</item>
+        <item>@string/p_distance</item>
+        <item>@string/p_calories</item>
+        <item>@string/p_heart_rate</item>
+        <item>@string/p_battery</item>
+    </string-array>
+
+    <string-array name="pref_entries_unit_system">
+        <item>@string/unit_metric</item>
+        <item>@string/unit_imperial</item>
+    </string-array>
+
+    <string-array name="pref_values_unit_system">
+        <item>@string/p_unit_metric</item>
+        <item>@string/p_unit_imperial</item>
+    </string-array>
+
+    <string-array name="pref_timeformat_entries">
+        <item>@string/timeformat_24h</item>
+        <item>@string/timeformat_am_pm</item>
+    </string-array>
+
+    <string-array name="pref_timeformat_values">
+        <item>@string/p_timeformat_24h</item>
+        <item>@string/p_timeformat_am_pm</item>
+    </string-array>
+
+    <string-array name="pref_call_privacy_mode">
+        <item name="off">@string/pref_call_privacy_mode_off</item>
+        <item name="name">@string/pref_call_privacy_mode_name</item>
+        <item name="number">@string/pref_call_privacy_mode_number</item>
+        <item name="complete">@string/pref_call_privacy_mode_complete</item>
+    </string-array>
+
+    <string-array name="pref_call_privacy_mode_values">
+        <item>@string/p_call_privacy_mode_off</item>
+        <item>@string/p_call_privacy_mode_name</item>
+        <item>@string/pref_call_privacy_mode_number</item>
+        <item>@string/p_call_privacy_mode_complete</item>
+    </string-array>
+
+    <string-array name="pref_amazfitbip_language">
+        <item name="-1">@string/automatic</item>
+        <item name="0">@string/simplified_chinese</item>
+        <item name="1">@string/traditional_chinese</item>
+        <item name="2">@string/english</item>
+    </string-array>
+
+    <string-array name="pref_amazfitbip_language_values">
+        <item>-1</item>
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+
+    <string-array name="prefs_heartrate_measurement_interval">
+        <item name="0">@string/off</item>
+        <item name="60">@string/interval_one_minute</item>
+        <item name="300">@string/interval_five_minutes</item>
+        <item name="600">@string/interval_ten_minutes</item>
+        <item name="1800">@string/interval_thirty_minutes</item>
+        <item name="3600">@string/interval_one_hour</item>
+    </string-array>
+
+    <string-array name="prefs_heartrate_measurement_interval_values">
+        <item>0</item>
+        <item>60</item>
+        <item>300</item>
+        <item>600</item>
+        <item>1800</item>
+        <item>3600</item>
+    </string-array>
+
 </resources>

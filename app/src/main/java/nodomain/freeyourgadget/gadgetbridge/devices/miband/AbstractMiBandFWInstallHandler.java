@@ -1,3 +1,19 @@
+/*  Copyright (C) 2015-2017 Andreas Shimokawa, Carsten Pfeiffer
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.devices.miband;
 
 import android.content.Context;
@@ -17,8 +33,8 @@ import nodomain.freeyourgadget.gadgetbridge.model.GenericItem;
 public abstract class AbstractMiBandFWInstallHandler implements InstallHandler {
     private static final Logger LOG = LoggerFactory.getLogger(AbstractMiBandFWInstallHandler.class);
 
-    private final Context mContext;
-    private AbstractMiBandFWHelper helper;
+    protected final Context mContext;
+    protected AbstractMiBandFWHelper helper;
     private String errorMessage;
 
     public AbstractMiBandFWInstallHandler(Uri uri, Context context) {
@@ -32,8 +48,23 @@ public abstract class AbstractMiBandFWInstallHandler implements InstallHandler {
         }
     }
 
+    public Context getContext() {
+        return mContext;
+    }
+
+    public AbstractMiBandFWHelper getHelper() {
+        return helper;
+    }
+
     protected abstract AbstractMiBandFWHelper createHelper(Uri uri, Context context) throws IOException;
 
+    protected GenericItem createInstallItem(GBDevice device) {
+        return new GenericItem(mContext.getString(R.string.installhandler_firmware_name, mContext.getString(device.getType().getName()), helper.getFirmwareKind(), helper.getHumanFirmwareVersion()));
+    }
+
+    protected String getFwUpgradeNotice() {
+        return mContext.getString(R.string.fw_upgrade_notice, helper.getHumanFirmwareVersion());
+    }
 
     @Override
     public void validateInstallation(InstallActivity installActivity, GBDevice device) {
@@ -57,8 +88,8 @@ public abstract class AbstractMiBandFWInstallHandler implements InstallHandler {
             return;
         }
 
-        GenericItem fwItem = new GenericItem(mContext.getString(R.string.miband_installhandler_miband_firmware, helper.getHumanFirmwareVersion()));
-        fwItem.setIcon(R.drawable.ic_device_miband);
+        GenericItem fwItem = createInstallItem(device);
+        fwItem.setIcon(device.getType().getIcon());
 
         if (!helper.isFirmwareGenerallyCompatibleWith(device)) {
             fwItem.setDetails(mContext.getString(R.string.miband_fwinstaller_incompatible_version));
@@ -68,7 +99,8 @@ public abstract class AbstractMiBandFWInstallHandler implements InstallHandler {
         }
         StringBuilder builder = new StringBuilder();
         if (helper.isSingleFirmware()) {
-            builder.append(mContext.getString(R.string.fw_upgrade_notice, helper.getHumanFirmwareVersion()));
+            getFwUpgradeNotice();
+            builder.append(getFwUpgradeNotice());
         } else {
             builder.append(mContext.getString(R.string.fw_multi_upgrade_notice, helper.getHumanFirmwareVersion(), helper.getHumanFirmwareVersion2()));
         }
@@ -80,7 +112,7 @@ public abstract class AbstractMiBandFWInstallHandler implements InstallHandler {
             // TODO: set a CHECK (OKAY) button
         } else {
             builder.append("  ").append(mContext.getString(R.string.miband_firmware_unknown_warning)).append(" \n\n")
-                    .append(mContext.getString(R.string.miband_firmware_suggest_whitelist, helper.getFirmwareVersion()));
+                    .append(mContext.getString(R.string.miband_firmware_suggest_whitelist, String.valueOf(helper.getFirmwareVersion())));
             fwItem.setDetails(mContext.getString(R.string.miband_fwinstaller_untested_version));
             // TODO: set a UNKNOWN (question mark) button
         }

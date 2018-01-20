@@ -1,19 +1,43 @@
+/*  Copyright (C) 2015-2017 Andreas Shimokawa, Carsten Pfeiffer, Christian
+    Fischer, Daniele Gobbetti, Lem Dulfo
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.activities;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.preference.EditTextPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NavUtils;
+import android.support.v4.content.LocalBroadcastManager;
 import android.text.InputType;
 import android.view.MenuItem;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Locale;
+
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
-import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.util.AndroidUtils;
 
 /**
  * A settings activity with support for preferences directly displaying their value.
@@ -21,9 +45,27 @@ import nodomain.freeyourgadget.gadgetbridge.R;
  * to set that listener in #onCreate, *not* in #onPostCreate, otherwise the value will
  * not be displayed.
  */
-public abstract class AbstractSettingsActivity extends AppCompatPreferenceActivity {
+public abstract class AbstractSettingsActivity extends AppCompatPreferenceActivity implements GBActivity {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractSettingsActivity.class);
+
+    private boolean isLanguageInvalid = false;
+
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            switch (action) {
+                case GBApplication.ACTION_LANGUAGE_CHANGE:
+                    setLanguage(GBApplication.getLanguage(), true);
+                    break;
+                case GBApplication.ACTION_QUIT:
+                    finish();
+                    break;
+            }
+        }
+    };
+
 
     /**
      * A preference value change listener that updates the preference's summary
@@ -88,11 +130,13 @@ public abstract class AbstractSettingsActivity extends AppCompatPreferenceActivi
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        if (GBApplication.isDarkThemeEnabled()) {
-            setTheme(R.style.GadgetbridgeThemeDark);
-        } else {
-            setTheme(R.style.GadgetbridgeTheme);
-        }
+        AbstractGBActivity.init(this);
+
+        IntentFilter filterLocal = new IntentFilter();
+        filterLocal.addAction(GBApplication.ACTION_QUIT);
+        filterLocal.addAction(GBApplication.ACTION_LANGUAGE_CHANGE);
+        LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver, filterLocal);
+
         super.onCreate(savedInstanceState);
     }
 
@@ -108,6 +152,21 @@ public abstract class AbstractSettingsActivity extends AppCompatPreferenceActivi
                 LOG.error("Unknown preference key: " + prefKey + ", unable to display value.");
             }
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (isLanguageInvalid) {
+            isLanguageInvalid = false;
+            recreate();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
+        super.onDestroy();
     }
 
     /**
@@ -160,5 +219,12 @@ public abstract class AbstractSettingsActivity extends AppCompatPreferenceActivi
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    public void setLanguage(Locale language, boolean invalidateLanguage) {
+        if (invalidateLanguage) {
+            isLanguageInvalid = true;
+        }
+        AndroidUtils.setLanguage(this, language);
     }
 }

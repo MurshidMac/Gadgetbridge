@@ -1,3 +1,20 @@
+/*  Copyright (C) 2015-2017 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+    Gobbetti, Frank Slezak, ivanovlev, Kasha, Lem Dulfo, Steffen Liebergeld
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.activities;
 
 import android.app.NotificationManager;
@@ -36,7 +53,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.NotificationType;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 
 
-public class DebugActivity extends GBActivity {
+public class DebugActivity extends AbstractGBActivity {
     private static final Logger LOG = LoggerFactory.getLogger(DebugActivity.class);
 
     private static final String EXTRA_REPLY = "reply";
@@ -61,10 +78,6 @@ public class DebugActivity extends GBActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             switch (intent.getAction()) {
-                case GBApplication.ACTION_QUIT: {
-                    finish();
-                    break;
-                }
                 case ACTION_REPLY: {
                     Bundle remoteInput = RemoteInput.getResultsFromIntent(intent);
                     CharSequence reply = remoteInput.getCharSequence(EXTRA_REPLY);
@@ -87,7 +100,6 @@ public class DebugActivity extends GBActivity {
         setContentView(R.layout.activity_debug);
 
         IntentFilter filter = new IntentFilter();
-        filter.addAction(GBApplication.ACTION_QUIT);
         filter.addAction(ACTION_REPLY);
         filter.addAction(DeviceService.ACTION_HEARTRATE_MEASUREMENT);
         LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver, filter);
@@ -114,6 +126,7 @@ public class DebugActivity extends GBActivity {
                 notificationSpec.sender = testString;
                 notificationSpec.subject = testString;
                 notificationSpec.type = NotificationType.values()[sendTypeSpinner.getSelectedItemPosition()];
+                notificationSpec.pebbleColor = notificationSpec.type.color;
                 notificationSpec.id = -1;
                 GBApplication.deviceService().onNotification(notificationSpec);
             }
